@@ -6,7 +6,8 @@
 | By Fabricio Seger Kolling
 | Copyright (c) 2021 Fabrício Seger Kolling
 | E-mail: fabricio@dulldusk.com
-| URL: https://www.dulldusk.com
+| Website: https://www.dulldusk.com
+| Script URL: https://github.com/dulldusk/php-auto-photoswipe-gallery
 +-----------------------------------------------------------------
 | CONFIGURATION AND INSTALATION NOTES
 +-----------------------------------------------------------------
@@ -57,11 +58,11 @@ $origPath   = 'put_images_here';
 $imagesPath = 'assets/images';
 $thumbsPath = 'assets/thumbs';
 
-$originalImagesDir = __DIR__ . DIRECTORY_SEPARATOR . $origPath   . DIRECTORY_SEPARATOR;
+$origImagesDir = __DIR__ . DIRECTORY_SEPARATOR . $origPath   . DIRECTORY_SEPARATOR;
 $resizedImagesDir  = __DIR__ . DIRECTORY_SEPARATOR . $imagesPath . DIRECTORY_SEPARATOR;
 $resizedThumbsDir  = __DIR__ . DIRECTORY_SEPARATOR . $thumbsPath . DIRECTORY_SEPARATOR;
 
-if (!is_dir($originalImagesDir)) die("Error: Source image folder does not exist!");
+if (!is_dir($origImagesDir)) die("Error: Source image folder does not exist!");
 if (!is_dir($resizedImagesDir)) mkdir($resizedImagesDir, 0755, true);
 if (!is_dir($resizedThumbsDir)) mkdir($resizedThumbsDir, 0755, true);
 
@@ -352,7 +353,7 @@ header("Content-type: text/html; charset=UTF-8");
     }
     $files_arr = [];
     $files_do_not_delete = [];
-    $dir_list = glob($originalImagesDir."*.{jpg,JPG,jpeg,JPEG,png,PNG,gif,GIF}", GLOB_BRACE);
+    $dir_list = glob($origImagesDir."*.{jpg,JPG,jpeg,JPEG,png,PNG,gif,GIF}", GLOB_BRACE);
     foreach ($dir_list as $file) {
         $file_name = basename($file);
         $file_dest_name = fix_filename($file_name);
