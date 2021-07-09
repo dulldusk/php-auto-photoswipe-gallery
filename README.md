@@ -6,7 +6,7 @@ Just upload the images, it will resize them and create all thumbnails.<br/>
 You can also configure password protection with a shareable link.
 
 ## CONFIGURATION AND INSTALATION NOTES
-Just throw this file anywhere in your webserver, upload your<br/>
+Throw this file anywhere in your webserver, upload your<br/>
 images on the "/put_images_here" folder, and enjoy!!
 
 ## LICENSE
