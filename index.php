@@ -242,7 +242,7 @@ header("Content-type: text/html; charset=UTF-8");
         }
         .gallery img {
             width: 100%;
-            height: 100%;
+            height: auto;
         }
     </style>
 </head>
