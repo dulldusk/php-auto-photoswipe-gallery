@@ -66,13 +66,16 @@ if (!is_dir($origImagesDir)) die("Error: Source image folder does not exist!");
 if (!is_dir($resizedImagesDir)) mkdir($resizedImagesDir, 0755, true);
 if (!is_dir($resizedThumbsDir)) mkdir($resizedThumbsDir, 0755, true);
 
+$refreshGallery = !isset($_COOKIE['galleryRefreshed']) || intval($_REQUEST['refreshGallery']);
+setcookie('galleryRefreshed','1', time() + (365 * 24 * 60 * 60)); // 1 year
+
 // Form Based Password protection
 $_POST['pass'] = trim($_POST['pass']);
 $_GET['auth'] = trim($_GET['auth']);
 if (strlen($requiredPasswordForm)){
     if (strlen($_POST['pass'])){
         if (md5($_POST['pass']) == md5($requiredPasswordForm)){
-            setcookie('auth',md5($requiredPasswordForm), 0);
+            setcookie('auth',md5($requiredPasswordForm), 0); // until closed
             $_COOKIE['auth'] = md5($requiredPasswordForm);
         }
     }
@@ -155,7 +158,7 @@ function fix_filename($str) {
     $str = str_replace(' ','-',$str);
     $str = rawurlencode($str);
     $str = str_replace('%','-',$str);
-    $str = replace_double(' ',$str);
+    $str = replace_double('-',$str);
     return $str;
 }
 // ex: return array_csort($o, "date", SORT_NUMERIC, SORT_DESC);
@@ -215,7 +218,7 @@ header("Content-type: text/html; charset=UTF-8");
         body, html {
             padding: 0;
             margin: 0;
-            background-color: #ddd;
+            background-color: #DDD;
             font-family: Helvetica, Verdana, Bookman, Arial;
         }
         a {
@@ -223,26 +226,23 @@ header("Content-type: text/html; charset=UTF-8");
         }
         a:link, a:visited, a:active {
             text-decoration: none;
+            color: #000;
         }
         a:hover {
-            color: #005595;
+            color: #0A77F7;
         }
         h1, h2, h3, h4, h5 {
             margin: 0;
         }
         .pageHeader {
-            max-width: 1190px;
             padding: 15px 12px;
         }
         .pageHeader h1, h2, h3, h4, h5 {
             margin: 0px 0px 10px 0px;
         }
-        .gallery {
-            border: 0px solid #ccc;
-        }
         .gallery img {
             width: 100%;
-            height: auto;
+            height: 100%;
         }
     </style>
 </head>
@@ -269,8 +269,10 @@ header("Content-type: text/html; charset=UTF-8");
             die();
         }
     }
+
     $files_arr = [];
     $files_do_not_delete = [];
+    // Get all images from the source directory
     $dir_list = glob($origImagesDir."*.{jpg,JPG,jpeg,JPEG,png,PNG,gif,GIF}", GLOB_BRACE);
     foreach ($dir_list as $file) {
         $file_name = basename($file);
@@ -278,7 +280,7 @@ header("Content-type: text/html; charset=UTF-8");
         $image_title = replace_double(' ',pathinfo($file_name, PATHINFO_FILENAME));
         $image_extension = pathinfo($file_dest_name, PATHINFO_EXTENSION);
         $files_do_not_delete[] = $file_dest_name;
-        list($image_width, $image_height) = getimagesize($file);
+        list($image_orig_width, $image_orig_height) = getimagesize($file);
         if($image_extension == 'jpg' || $image_extension == 'jpeg' || $image_extension == 'png' || $image_extension == 'gif') {
             $files_arr[] = array(
                 'file_orig' => $file,
@@ -288,139 +290,173 @@ header("Content-type: text/html; charset=UTF-8");
                 'file_dest_name' => $file_dest_name,
                 'image_title' => $image_title,
                 'image_extension' => $image_extension,
-                'image_width' => $image_width,
-                'image_height' => $image_height,
-                'image_ratio' => $image_width / $image_height,
-                'resize_this_image' => !file_exists($resizedImagesDir.$file_dest_name)
+                'image_orig_width' => $image_orig_width,
+                'image_orig_height' => $image_orig_height,
+                'image_ratio' => $image_orig_width / $image_orig_height,
+                'resize_this_image' => (!file_exists($resizedImagesDir.$file_dest_name) || !file_exists($resizedThumbsDir.$file_dest_name))
             );
         }
     }
-    // Sort the images
+    // Sort the images by creation date
     $files_arr = array_csort($files_arr, "file_ctime", SORT_NUMERIC, SORT_DESC);
-    // Delete all files that do not exist in source directory
-    $dir_list = glob($resizedImagesDir."*.{jpg,png,gif}", GLOB_BRACE);
-    foreach ($dir_list as $file) {
-        $file_name = basename($file);
-        if (array_search($file_name, $files_do_not_delete) === false) {
-            @unlink($file);
-        }
-    }
-    $dir_list = glob($resizedThumbsDir."*.{jpg,png,gif}", GLOB_BRACE);
-    foreach ($dir_list as $file) {
-        $file_name = basename($file);
-        if (array_search($file_name, $files_do_not_delete) === false) {
-            @unlink($file);
-        }
-    }
-    $gallery_images = [];
+
     $files_arr_total = count($files_arr);
-    $files_invalid_format = [];
-    for ($i=0;$i<$files_arr_total;$i++) {
-        $file = $files_arr[$i];
-        if ($file['resize_this_image']){
-            $src_img = false;
-            if($file['image_extension'] == 'jpg' || $file['image_extension'] == 'jpeg' ) {
-                $src_img = imagecreatefromjpeg($file['file_orig']);
-            } elseif($file['image_extension'] == 'png') {
-                $src_img = imagecreatefrompng($file['file_orig']);
-            } elseif($file['image_extension'] == 'gif') {
-                $src_img = imagecreatefromgif($file['file_orig']);
-            }
-            if ($src_img !== false){
-                if ($imgMaxSize) {
-                    $ratio = $file['image_width'] > $file['image_height'] ? $imgMaxSize / $file['image_width'] : $imgMaxSize / $file['image_height'] ;
-                    $new_width = ceil($file['image_width'] * $ratio);
-                    $new_height = ceil($file['image_height'] * $ratio);
-                    $dst_image = imagecreatetruecolor($new_width, $new_height);
-                    // Keeps the transparency of the original image
-                    if($file['image_extension'] == 'gif' || $file['image_extension'] == 'png') {
-                        imagealphablending($dst_image,false);
-                        imagesavealpha($dst_image,true);
-                    }
-                    imagecopyresampled($dst_image, $src_img, 0, 0, 0, 0, $new_width, $new_height, $file['image_width'], $file['image_height']);
-                    if($file['image_extension'] == 'jpg' || $file['image_extension'] == 'jpeg' ) {
-                        imagejpeg($dst_image, $resizedImagesDir.$file['file_dest_name'], $jpgImgQuality);
-                    } elseif($file['image_extension'] == 'png') {
-                        imagepng($dst_image, $resizedImagesDir.$file['file_dest_name']);
-                    } elseif($file['image_extension'] == 'gif') {
-                        imagegif($dst_image, $resizedImagesDir.$file['file_dest_name']);
-                    }
-                    // Clear memory
-                    imagedestroy($dst_image);
-                    $dst_image = null;
-                    unset($dst_image);
-                    // Save new dimentions to use on markup
-                    $files_arr[$i]['image_width'] = $new_width;
-                    $files_arr[$i]['image_height'] = $new_height;
-                } else {
-                    copy($file['file_orig'],$resizedImagesDir.$file['file_dest_name']);
-                }
-                if ($thumbMaxSize) {
-                    $ratio = $file['image_width'] < $file['image_height'] ? $thumbMaxSize / $file['image_width'] : $thumbMaxSize / $file['image_height'] ;
-                    $new_width = ceil($file['image_width'] * $ratio);
-                    $new_height = ceil($file['image_height'] * $ratio);
-                    $dst_image = imagecreatetruecolor($new_width, $new_height);
-                    // Keeps the transparency of the original image
-                    if($file['image_extension'] == 'gif' || $file['image_extension'] == 'png') {
-                        imagealphablending($dst_image,false);
-                        imagesavealpha($dst_image,true);
-                    }
-                    imagecopyresampled($dst_image, $src_img, 0, 0, 0, 0, $new_width, $new_height, $file['image_width'], $file['image_height']);
-                    if($file['image_extension'] == 'jpg' || $file['image_extension'] == 'jpeg' ) {
-                        imagejpeg($dst_image, $resizedThumbsDir.$file['file_dest_name'], $jpgImgQuality);
-                    } elseif($file['image_extension'] == 'png') {
-                        imagepng($dst_image, $resizedThumbsDir.$file['file_dest_name']);
-                    } elseif($file['image_extension'] == 'gif') {
-                        imagegif($dst_image, $resizedThumbsDir.$file['file_dest_name']);
-                    }
-                    // Clear memory
-                    imagedestroy($dst_image);
-                    $dst_image = null;
-                    unset($dst_image);
-                    // Save new dimentions to use on markup
-                    $files_arr[$i]['thumb_width'] = $new_width;
-                    $files_arr[$i]['thumb_height'] = $new_height;
-                } else {
-                    copy($file['file_orig'],$resizedThumbsDir.$file['file_dest_name']);
-                }
-                // Clear memory
-                imagedestroy($src_img);
-                $src_img = null;
-                unset($src_img);
-            } else {
-                if (isset($_REQUEST['deleteInvalid'])) unlink($file['file_orig']);
-                else $files_invalid_format[] = $file['file_orig_name'];
+    $gallery_images = [];
+    if ($refreshGallery) {
+        // Delete all files that do not exist in source directory
+        $dir_list = glob($resizedImagesDir."*.{jpg,png,gif}", GLOB_BRACE);
+        foreach ($dir_list as $file) {
+            $file_name = basename($file);
+            if (array_search($file_name, $files_do_not_delete) === false) {
+                @unlink($file);
             }
         }
-        if (file_exists($resizedImagesDir.$file['file_dest_name']) && file_exists($resizedThumbsDir.$file['file_dest_name'])){
-            if (!isset($file['image_width'])){
-                list($image_width, $image_height) = getimagesize($resizedImagesDir.$file['file_dest_name']);
-                $file['image_width'] = $image_width;
-                $file['image_height'] = $image_height;
+        $dir_list = glob($resizedThumbsDir."*.{jpg,png,gif}", GLOB_BRACE);
+        foreach ($dir_list as $file) {
+            $file_name = basename($file);
+            if (array_search($file_name, $files_do_not_delete) === false) {
+                @unlink($file);
             }
-            if (!isset($file['thumb_width'])){
-                list($thumb_width, $thumb_height) = getimagesize($resizedThumbsDir.$file['file_dest_name']);
-                $file['thumb_width'] = $thumb_width;
-                $file['thumb_height'] = $thumb_height;
-            }
-            $gallery_images[] = $file;
         }
-    }
-    if (count($files_invalid_format)) {
-        $pageHeaderText .= '<br><br>PHP Error: Unrecognized image format, convert and upload again.';
-        $pageHeaderText .= ' <a href="?deleteInvalid">(DELETE INVALID)</a>';
-        foreach ($files_invalid_format as $file_name) {
-            $pageHeaderText .= '<br><a href="'.$origPath.'/'.$file_name.'" target="_blank">'.$file_name.'</a>';
+        // Resize images and create thumbs
+        $files_invalid_format = [];
+        for ($i=0;$i<$files_arr_total;$i++) {
+            $file = $files_arr[$i];
+            if ($file['resize_this_image']){
+                $src_img = false;
+                if($file['image_extension'] == 'jpg' || $file['image_extension'] == 'jpeg' ) {
+                    $src_img = imagecreatefromjpeg($file['file_orig']);
+                } elseif($file['image_extension'] == 'png') {
+                    $src_img = imagecreatefrompng($file['file_orig']);
+                } elseif($file['image_extension'] == 'gif') {
+                    $src_img = imagecreatefromgif($file['file_orig']);
+                }
+                if ($src_img !== false){
+                    if ($imgMaxSize) {
+                        $ratio = $file['image_orig_width'] < $file['image_orig_height'] ? $imgMaxSize / $file['image_orig_width'] : $imgMaxSize / $file['image_orig_height'] ;
+                        $new_width = ceil($file['image_orig_width'] * $ratio);
+                        $new_height = ceil($file['image_orig_height'] * $ratio);
+                        $dst_image = imagecreatetruecolor($new_width, $new_height);
+                        // Keeps the transparency of the original image
+                        if($file['image_extension'] == 'gif' || $file['image_extension'] == 'png') {
+                            imagealphablending($dst_image,false);
+                            imagesavealpha($dst_image,true);
+                        }
+                        imagecopyresampled($dst_image, $src_img, 0, 0, 0, 0, $new_width, $new_height, $file['image_orig_width'], $file['image_orig_height']);
+                        if($file['image_extension'] == 'jpg' || $file['image_extension'] == 'jpeg' ) {
+                            imagejpeg($dst_image, $resizedImagesDir.$file['file_dest_name'], $jpgImgQuality);
+                        } elseif($file['image_extension'] == 'png') {
+                            imagepng($dst_image, $resizedImagesDir.$file['file_dest_name']);
+                        } elseif($file['image_extension'] == 'gif') {
+                            imagegif($dst_image, $resizedImagesDir.$file['file_dest_name']);
+                        }
+                        // Clear memory
+                        imagedestroy($dst_image);
+                        $dst_image = null;
+                        unset($dst_image);
+                        // Save new dimentions to use on markup
+                        $files_arr[$i]['image_width'] = $new_width;
+                        $files_arr[$i]['image_height'] = $new_height;
+                    } else {
+                        copy($file['file_orig'],$resizedImagesDir.$file['file_dest_name']);
+                    }
+                    if ($thumbMaxSize) {
+                        $ratio = $file['image_orig_width'] < $file['image_orig_height'] ? $thumbMaxSize / $file['image_orig_width'] : $thumbMaxSize / $file['image_orig_height'] ;
+                        $new_width = ceil($file['image_orig_width'] * $ratio);
+                        $new_height = ceil($file['image_orig_height'] * $ratio);
+                        $dst_image = imagecreatetruecolor($new_width, $new_height);
+                        // Keeps the transparency of the original image
+                        if($file['image_extension'] == 'gif' || $file['image_extension'] == 'png') {
+                            imagealphablending($dst_image,false);
+                            imagesavealpha($dst_image,true);
+                        }
+                        imagecopyresampled($dst_image, $src_img, 0, 0, 0, 0, $new_width, $new_height, $file['image_orig_width'], $file['image_orig_height']);
+                        if($file['image_extension'] == 'jpg' || $file['image_extension'] == 'jpeg' ) {
+                            imagejpeg($dst_image, $resizedThumbsDir.$file['file_dest_name'], $jpgImgQuality);
+                        } elseif($file['image_extension'] == 'png') {
+                            imagepng($dst_image, $resizedThumbsDir.$file['file_dest_name']);
+                        } elseif($file['image_extension'] == 'gif') {
+                            imagegif($dst_image, $resizedThumbsDir.$file['file_dest_name']);
+                        }
+                        // Clear memory
+                        imagedestroy($dst_image);
+                        $dst_image = null;
+                        unset($dst_image);
+                        // Save new dimentions to use on markup
+                        $files_arr[$i]['thumb_width'] = $new_width;
+                        $files_arr[$i]['thumb_height'] = $new_height;
+                    } else {
+                        copy($file['file_orig'],$resizedThumbsDir.$file['file_dest_name']);
+                    }
+                    // Clear memory
+                    imagedestroy($src_img);
+                    $src_img = null;
+                    unset($src_img);
+                } else {
+                    if (isset($_REQUEST['deleteInvalid'])) unlink($file['file_orig']);
+                    else $files_invalid_format[] = $file['file_orig_name'];
+                }
+            }
+            if (file_exists($resizedImagesDir.$file['file_dest_name']) && file_exists($resizedThumbsDir.$file['file_dest_name'])){
+                if (!isset($file['image_width'])){
+                    list($image_width, $image_height) = getimagesize($resizedImagesDir.$file['file_dest_name']);
+                    $file['image_width'] = $image_width;
+                    $file['image_height'] = $image_height;
+                }
+                $file['image_mtime'] = filemtime($resizedImagesDir.$file['file_dest_name']);
+                if (!isset($file['thumb_width'])){
+                    list($thumb_width, $thumb_height) = getimagesize($resizedThumbsDir.$file['file_dest_name']);
+                    $file['thumb_width'] = $thumb_width;
+                    $file['thumb_height'] = $thumb_height;
+                }
+                $file['thumb_mtime'] = filemtime($resizedThumbsDir.$file['file_dest_name']);
+                $gallery_images[] = $file;
+            }
+        }
+        if (count($files_invalid_format)) {
+            $pageHeaderText .= '<br><br>PHP Error: Unrecognized image format, convert and upload again.';
+            $pageHeaderText .= ' <a href="?deleteInvalid">(DELETE INVALID)</a>';
+            foreach ($files_invalid_format as $file_name) {
+                $pageHeaderText .= '<br><a href="'.$origPath.'/'.$file_name.'" target="_blank">'.$file_name.'</a>';
+            }
+        }
+    } else {
+        // Only get a list of the existing resized images and thumbs
+        for ($i=0;$i<$files_arr_total;$i++) {
+            $file = $files_arr[$i];
+            if (file_exists($resizedImagesDir.$file['file_dest_name']) && file_exists($resizedThumbsDir.$file['file_dest_name'])){
+                if (!isset($file['image_width'])){
+                    list($image_width, $image_height) = getimagesize($resizedImagesDir.$file['file_dest_name']);
+                    $file['image_width'] = $image_width;
+                    $file['image_height'] = $image_height;
+                }
+                $file['image_mtime'] = filemtime($resizedImagesDir.$file['file_dest_name']);
+                if (!isset($file['thumb_width'])){
+                    list($thumb_width, $thumb_height) = getimagesize($resizedThumbsDir.$file['file_dest_name']);
+                    $file['thumb_width'] = $thumb_width;
+                    $file['thumb_height'] = $thumb_height;
+                }
+                $file['thumb_mtime'] = filemtime($resizedThumbsDir.$file['file_dest_name']);
+                $gallery_images[] = $file;
+            }
         }
     }
     if (strlen($pageHeaderTitle) || strlen($pageHeaderText)) {
+        $totalImages = ' - Showing '.count($gallery_images).((count($gallery_images)==1)?' image':' images');
+        $refreshButton = '&nbsp;
+        <form name="refresh_form" method="get" style="display: inline-block;">
+            <input type="hidden" name="refreshGallery" value="1">
+            <input type="submit" value="Refresh Gallery">
+        </form>';
         echo '<div class="pageHeader">';
         if (strlen($pageHeaderTitle)) {
-            echo '<h2><a href="';
+            echo '<h2 style="display: inline-block;"><a href="';
             if (strlen($requiredPasswordForm)) {
                 echo currentUrl(true).'?auth='.md5($requiredPasswordForm);
+            } else {
+                echo currentUrl(true);
             }
-            echo '">'.$pageHeaderTitle.'</a></h2>';
+            echo '">'.$pageHeaderTitle.$totalImages.'</a>'.$refreshButton.'</h2>';
         }
         if (strlen($pageHeaderText)) {
             echo '<h5>'.$pageHeaderText.'</h5>';
@@ -432,8 +468,8 @@ header("Content-type: text/html; charset=UTF-8");
         foreach ($gallery_images as $image) {
             echo '
             <div width="'.$image['thumb_width'].'" height="'.$image['thumb_height'].'">
-                <a href="'.$imagesPath.'/'.$image['file_dest_name'].'" data-size="'.$image['image_width'].'x'.$image['image_height'].'" data-title="'.htmlspecialchars($image['image_title']).'" />
-                    <img class="lozad" src="" data-src="'.$thumbsPath.'/'.$image['file_dest_name'].'" title="'.htmlspecialchars($image['image_title']).'">
+                <a href="'.$imagesPath.'/'.$image['file_dest_name'].'?t='.$image['image_mtime'].'" data-size="'.$image['image_width'].'x'.$image['image_height'].'" data-title="'.htmlspecialchars($image['image_title']).'" />
+                    <img data-src="'.$thumbsPath.'/'.$image['file_dest_name'].'?t='.$image['thumb_mtime'].'" class="lozad" loading="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" title="'.htmlspecialchars($image['image_title']).'">
                 </a>
             </div>';
         }
@@ -454,7 +490,7 @@ header("Content-type: text/html; charset=UTF-8");
                     highResImagesWidthThreshold: 3000,
                     responsiveWidthThreshold: false,
                     refitOnResize: true,
-                    //refitOnResizeDelay: 500,
+                    //refitOnResizeDelay: 50,
                     maxItemsToShowWhenResponsiveThresholdSurpassed: 10,
                     showTailWhenNotEnoughItemsForEvenOneRow: true
                 });
@@ -533,9 +569,19 @@ header("Content-type: text/html; charset=UTF-8");
                                     var thumbnail = items[index].el.children[0],
                                         pageYScroll = window.pageYOffset || document.documentElement.scrollTop,
                                         rect = thumbnail.getBoundingClientRect();
-
                                     return {x:rect.left, y:rect.top + pageYScroll, w:rect.width};
-                                }
+                                },
+                                getDoubleTapZoom: function(isMouseClick, item) {
+                                    if(!item.zoomLevel) {
+                                        item.zoomLevel = item.initialZoomLevel
+                                    }
+                                    var res = item.initialZoomLevel;
+                                    if(item.zoomLevel < 1.5) res = 1.5
+                                    else if(item.zoomLevel < 3.5) res = 3.5
+                                    item.zoomLevel = res;
+                                    return res;
+                                },
+                                maxSpreadZoom: 3.5
                             };
                         $.extend(options,_options);
                         var gallery = new PhotoSwipe( pswpElement, PhotoSwipeUI_Default, items, options);
