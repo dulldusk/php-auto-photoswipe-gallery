@@ -85,7 +85,15 @@ if (strlen($requiredPasswordForm)){
     }
     if (strlen($_GET['auth'])){
         if ($_GET['auth'] == md5($requiredPasswordForm)){
+            setcookie('auth',md5($requiredPasswordForm), 0); // until closed
             $_COOKIE['auth'] = md5($requiredPasswordForm);
+        }
+    }
+    if (!strlen($_GET['auth'])){
+        $url_with_auth = currentUrl(true).'?auth='.md5($requiredPasswordForm);
+        if(currentUrl() != $url_with_auth){
+            header('Location: '.$url_with_auth);
+            die();
         }
     }
 }
@@ -259,7 +267,7 @@ header("Content-type: text/html; charset=UTF-8");
                 <h3>Restricted access, enter password:</h3>
                 <h3>
                     <form name="auth_form" method="post">
-                        <input type=password name=pass value="" style="width:150px;">&nbsp;<input type=submit value="Ok">
+                        <input type="password" name="pass" value="" style="width:150px;">&nbsp;<input type=submit value="Ok">
                     </form>
                 </h3>
                 <script type="text/javascript">
