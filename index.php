@@ -212,16 +212,12 @@ header("Content-type: text/html; charset=UTF-8");
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jquery-mosaic@0.15.3/jquery.mosaic.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <style>
-
-        /* [PAGE] */
-
         body, html {
             padding: 0;
             margin: 0;
             background-color: #ddd;
             font-family: Helvetica, Verdana, Bookman, Arial;
         }
-
         a {
             color: #000;
         }
@@ -231,13 +227,9 @@ header("Content-type: text/html; charset=UTF-8");
         a:hover {
             color: #005595;
         }
-
         h1, h2, h3, h4, h5 {
             margin: 0;
         }
-
-        /* [GALLERY] */
-
         .pageHeader {
             max-width: 1190px;
             padding: 15px 12px;
@@ -246,51 +238,12 @@ header("Content-type: text/html; charset=UTF-8");
             margin: 0px 0px 10px 0px;
         }
         .gallery {
-            border: 1px solid #ccc;
-            background-color: #eee;
+            border: 0px solid #ccc;
         }
         .gallery img {
             width: 100%;
+            height: auto;
         }
-
-        /* [LIGHTBOX] */
-
-        .pswp__caption__center {
-            font-size: 16px;
-        }
-        #lfront, #lback {
-            position: fixed;
-            top: 0;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.5s;
-            width: 100%;
-            height: 100%;
-        }
-        #lfront img {
-            position: fixed;
-            /* or absolute */
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            max-width: 100%;
-            max-height: 100%;
-        }
-        #lback {
-            height: 100vh;
-            background: #000;
-        }
-        #lfront.show {
-            z-index: 1000;
-            opacity: 1;
-            visibility: visible;
-        }
-        #lback.show {
-            z-index: 999;
-            opacity: 0.95;
-            visibility: visible;
-        }
-
     </style>
 </head>
 <body>
@@ -403,7 +356,7 @@ header("Content-type: text/html; charset=UTF-8");
                     copy($file['file_orig'],$resizedImagesDir.$file['file_dest_name']);
                 }
                 if ($thumbMaxSize) {
-                    $ratio = $file['image_width'] > $file['image_height'] ? $thumbMaxSize / $file['image_width'] : $thumbMaxSize / $file['image_height'] ;
+                    $ratio = $file['image_width'] < $file['image_height'] ? $thumbMaxSize / $file['image_width'] : $thumbMaxSize / $file['image_height'] ;
                     $new_width = ceil($file['image_width'] * $ratio);
                     $new_height = ceil($file['image_height'] * $ratio);
                     $dst_image = imagecreatetruecolor($new_width, $new_height);
@@ -435,7 +388,8 @@ header("Content-type: text/html; charset=UTF-8");
                 $src_img = null;
                 unset($src_img);
             } else {
-                $files_invalid_format[] = $file['file_orig_name'];
+                if (isset($_REQUEST['deleteInvalid'])) unlink($file['file_orig']);
+                else $files_invalid_format[] = $file['file_orig_name'];
             }
         }
         if (file_exists($resizedImagesDir.$file['file_dest_name']) && file_exists($resizedThumbsDir.$file['file_dest_name'])){
@@ -454,6 +408,7 @@ header("Content-type: text/html; charset=UTF-8");
     }
     if (count($files_invalid_format)) {
         $pageHeaderText .= '<br><br>PHP Error: Unrecognized image format, convert and upload again.';
+        $pageHeaderText .= ' <a href="?deleteInvalid">(DELETE INVALID)</a>';
         foreach ($files_invalid_format as $file_name) {
             $pageHeaderText .= '<br><a href="'.$origPath.'/'.$file_name.'" target="_blank">'.$file_name.'</a>';
         }
@@ -491,8 +446,8 @@ header("Content-type: text/html; charset=UTF-8");
             //INIT Mosaic Gallery
             $(function() {
                 $('#gallery').Mosaic({
-                    outerMargin: 10,
-                    innerGap: 10,
+                    outerMargin: 0,
+                    innerGap: 0,
                     defaultAspectRatio: 1,
                     maxRowHeight: 400,
                     maxRowHeightPolicy: 'tail', // crop, skip, oversize, tail
