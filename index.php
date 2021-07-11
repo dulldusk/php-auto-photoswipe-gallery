@@ -433,16 +433,11 @@ header("Content-type: text/html; charset=UTF-8");
         echo '<div class="pageHeader">';
         if (strlen($pageHeaderTitle)) {
             echo '<h2 style="display: inline-block;"><a href="';
-            if (strlen($requiredPasswordForm)) {
-                echo currentUrl(true).'?auth='.md5($requiredPasswordForm);
-            } else {
-                echo currentUrl(true);
-            }
+            if (strlen($requiredPasswordForm)) echo currentUrl(true).'?auth='.md5($requiredPasswordForm);
+            else echo currentUrl(true);
             echo '">'.$pageHeaderTitle.$totalImages.'</a>'.$refreshButton.'</h2>';
         }
-        if (strlen($pageHeaderText)) {
-            echo '<h5>'.$pageHeaderText.'</h5>';
-        }
+        if (strlen($pageHeaderText)) echo '<h5>'.$pageHeaderText.'</h5>';
         echo '</div>';
     }
     if (count($gallery_images)){
