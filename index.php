@@ -406,11 +406,13 @@ header("Content-type: text/html; charset=UTF-8");
                     $file['image_width'] = $image_width;
                     $file['image_height'] = $image_height;
                 }
+                $file['image_mtime'] = filemtime($resizedImagesDir.$file['file_dest_name']);
                 if (!isset($file['thumb_width'])){
                     list($thumb_width, $thumb_height) = getimagesize($resizedThumbsDir.$file['file_dest_name']);
                     $file['thumb_width'] = $thumb_width;
                     $file['thumb_height'] = $thumb_height;
                 }
+                $file['thumb_mtime'] = filemtime($resizedThumbsDir.$file['file_dest_name']);
                 $gallery_images[] = $file;
             }
         }
@@ -467,8 +469,8 @@ header("Content-type: text/html; charset=UTF-8");
         foreach ($gallery_images as $image) {
             echo '
             <div width="'.$image['thumb_width'].'" height="'.$image['thumb_height'].'">
-                <a href="'.$imagesPath.'/'.$image['file_dest_name'].'" data-size="'.$image['image_width'].'x'.$image['image_height'].'" data-title="'.htmlspecialchars($image['image_title']).'" />
-                    <img class="lozad" src="" data-src="'.$thumbsPath.'/'.$image['file_dest_name'].'" title="'.htmlspecialchars($image['image_title']).'">
+                <a href="'.$imagesPath.'/'.$image['file_dest_name'].'?time='.$image['image_mtime'].'" data-size="'.$image['image_width'].'x'.$image['image_height'].'" data-title="'.htmlspecialchars($image['image_title']).'" />
+                    <img data-src="'.$thumbsPath.'/'.$image['file_dest_name'].'?time='.$image['thumb_mtime'].'" class="lozad" loading="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAoMBgDTD2qgAAAAASUVORK5CYII=" title="'.htmlspecialchars($image['image_title']).'">
                 </a>
             </div>';
         }
