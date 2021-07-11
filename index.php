@@ -318,13 +318,9 @@ header("Content-type: text/html; charset=UTF-8");
             $file = $files_arr[$i];
             if ($file['resize_this_image']){
                 $src_img = false;
-                if($file['image_extension'] == 'jpg' || $file['image_extension'] == 'jpeg' ) {
-                    $src_img = imagecreatefromjpeg($file['file_orig']);
-                } elseif($file['image_extension'] == 'png') {
-                    $src_img = imagecreatefrompng($file['file_orig']);
-                } elseif($file['image_extension'] == 'gif') {
-                    $src_img = imagecreatefromgif($file['file_orig']);
-                }
+                if($file['image_extension'] == 'jpg' || $file['image_extension'] == 'jpeg' ) $src_img = imagecreatefromjpeg($file['file_orig']);
+                elseif($file['image_extension'] == 'png') $src_img = imagecreatefrompng($file['file_orig']);
+                elseif($file['image_extension'] == 'gif') $src_img = imagecreatefromgif($file['file_orig']);
                 if ($src_img !== false){
                     if ($imgMaxSize) {
                         $ratio = $file['image_orig_width'] < $file['image_orig_height'] ? $imgMaxSize / $file['image_orig_width'] : $imgMaxSize / $file['image_orig_height'] ;
@@ -337,13 +333,9 @@ header("Content-type: text/html; charset=UTF-8");
                             imagesavealpha($dst_image,true);
                         }
                         imagecopyresampled($dst_image, $src_img, 0, 0, 0, 0, $new_width, $new_height, $file['image_orig_width'], $file['image_orig_height']);
-                        if($file['image_extension'] == 'jpg' || $file['image_extension'] == 'jpeg' ) {
-                            imagejpeg($dst_image, $resizedImagesDir.$file['file_dest_name'], $jpgImgQuality);
-                        } elseif($file['image_extension'] == 'png') {
-                            imagepng($dst_image, $resizedImagesDir.$file['file_dest_name']);
-                        } elseif($file['image_extension'] == 'gif') {
-                            imagegif($dst_image, $resizedImagesDir.$file['file_dest_name']);
-                        }
+                        if($file['image_extension'] == 'jpg' || $file['image_extension'] == 'jpeg' ) imagejpeg($dst_image, $resizedImagesDir.$file['file_dest_name'], $jpgImgQuality);
+                        elseif($file['image_extension'] == 'png') imagepng($dst_image, $resizedImagesDir.$file['file_dest_name']);
+                        elseif($file['image_extension'] == 'gif') imagegif($dst_image, $resizedImagesDir.$file['file_dest_name']);
                         // Clear memory
                         imagedestroy($dst_image);
                         $dst_image = null;
@@ -365,13 +357,9 @@ header("Content-type: text/html; charset=UTF-8");
                             imagesavealpha($dst_image,true);
                         }
                         imagecopyresampled($dst_image, $src_img, 0, 0, 0, 0, $new_width, $new_height, $file['image_orig_width'], $file['image_orig_height']);
-                        if($file['image_extension'] == 'jpg' || $file['image_extension'] == 'jpeg' ) {
-                            imagejpeg($dst_image, $resizedThumbsDir.$file['file_dest_name'], $jpgImgQuality);
-                        } elseif($file['image_extension'] == 'png') {
-                            imagepng($dst_image, $resizedThumbsDir.$file['file_dest_name']);
-                        } elseif($file['image_extension'] == 'gif') {
-                            imagegif($dst_image, $resizedThumbsDir.$file['file_dest_name']);
-                        }
+                        if($file['image_extension'] == 'jpg' || $file['image_extension'] == 'jpeg' ) imagejpeg($dst_image, $resizedThumbsDir.$file['file_dest_name'], $jpgImgQuality);
+                        elseif($file['image_extension'] == 'png') imagepng($dst_image, $resizedThumbsDir.$file['file_dest_name']);
+                        elseif($file['image_extension'] == 'gif') imagegif($dst_image, $resizedThumbsDir.$file['file_dest_name']);
                         // Clear memory
                         imagedestroy($dst_image);
                         $dst_image = null;
