@@ -400,10 +400,15 @@ header("Content-type: text/html; charset=UTF-8");
             }
         }
         if (count($files_invalid_format)) {
-            $pageHeaderText .= '<br><br>PHP Error: Unrecognized image format, convert and upload again.';
-            $pageHeaderText .= ' <a href="?deleteInvalid">(DELETE INVALID)</a>';
+            $pageHeaderText .= '<br><br><span style="color:red">PHP Error: Unrecognized image format. Convert and upload again.</span>';
+            $pageHeaderText .= '&nbsp;
+            <form name="delete_invalid_form" method="get" style="display: inline-block; margin-bottom: 10px;">
+                <input type="hidden" name="refreshGallery" value="1">
+                <input type="hidden" name="deleteInvalid" value="1">
+                <input type="submit" value="Delete Invalid Images">
+            </form>';
             foreach ($files_invalid_format as $file_name) {
-                $pageHeaderText .= '<br><a href="'.$origImagesPath.'/'.$file_name.'" target="_blank">'.$file_name.'</a>';
+                $pageHeaderText .= '<br><a href="'.$origImagesPath.'/'.$file_name.'" target="_blank">'.currentUrl(true).$origImagesPath.'/'.$file_name.'</a>';
             }
         }
     } else {
@@ -458,10 +463,12 @@ header("Content-type: text/html; charset=UTF-8");
         ?>
         <script type="text/javascript">
             //INIT Lazy Loader
-            try {
-                const observer = lozad();
-                observer.observe();
-            } catch(err) {}
+            $(function() {
+                try {
+                    const observer = lozad();
+                    observer.observe();
+                } catch(err) {}
+            });
             //INIT Mosaic Gallery
             $(function() {
                 $('#gallery').Mosaic({
