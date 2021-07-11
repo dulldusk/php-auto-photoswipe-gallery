@@ -31,6 +31,9 @@ $imgMaxSize = 0;
 $thumbMaxSize = 400;
 $jpgImgQuality = 70;
 
+// The page mosaic row max height, everything else is responsive
+$pageRowMaxHeight = 400;
+
 // Option 1) HTTP Basic Password protection
 $requiredUser = "";
 $requiredPassword = "";
@@ -40,11 +43,11 @@ $requiredPassword = "";
 $requiredPasswordForm = "";
 
 // Folder options
-$origImagesPath  = 'put_images_here';
+$origImagesPath = 'put_images_here';
 $resizedImagesPath = 'assets/images';
 $resizedThumbsPath = 'assets/thumbs';
 
-// ------------------------------------------------------------------------------------------
+// ------------------------------------------------ ------------------------------------------
 // Script
 // ------------------------------------------------------------------------------------------
 
@@ -465,7 +468,7 @@ header("Content-type: text/html; charset=UTF-8");
                     outerMargin: 0,
                     innerGap: 0,
                     defaultAspectRatio: 1,
-                    maxRowHeight: 400,
+                    maxRowHeight: <?php echo intval($pageRowMaxHeight) ?>,
                     maxRowHeightPolicy: 'tail', // crop, skip, oversize, tail
                     highResImagesWidthThreshold: 3000,
                     responsiveWidthThreshold: false,
