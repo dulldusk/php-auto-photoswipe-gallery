@@ -89,7 +89,7 @@ if (strlen($requiredPasswordForm)){
             $_COOKIE['auth'] = md5($requiredPasswordForm);
         }
     }
-    if (!strlen($_GET['auth'])){
+    if ($_COOKIE['auth'] == md5($requiredPasswordForm)){
         $url_with_auth = currentUrl(true).'?auth='.md5($requiredPasswordForm);
         if(currentUrl() != $url_with_auth){
             header('Location: '.$url_with_auth);
