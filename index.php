@@ -39,6 +39,11 @@ $requiredPassword = "";
 // Once defined, you can login on the page, and copy the link on the page header to share for direct access
 $requiredPasswordForm = "";
 
+// Folder options
+$origImagesPath  = 'put_images_here';
+$resizedImagesPath = 'assets/images';
+$resizedThumbsPath = 'assets/thumbs';
+
 // ------------------------------------------------------------------------------------------
 // Script
 // ------------------------------------------------------------------------------------------
@@ -54,13 +59,9 @@ if (!function_exists('mb_strtolower') || !function_exists('mb_strtoupper')) {
     die('Error: Please enable "mbstring" PHP module.<br>http://php.net/manual/en/book.mbstring.php');
 }
 
-$origPath   = 'put_images_here';
-$imagesPath = 'assets/images';
-$thumbsPath = 'assets/thumbs';
-
-$origImagesDir = __DIR__ . DIRECTORY_SEPARATOR . $origPath   . DIRECTORY_SEPARATOR;
-$resizedImagesDir  = __DIR__ . DIRECTORY_SEPARATOR . $imagesPath . DIRECTORY_SEPARATOR;
-$resizedThumbsDir  = __DIR__ . DIRECTORY_SEPARATOR . $thumbsPath . DIRECTORY_SEPARATOR;
+$origImagesDir = __DIR__ . DIRECTORY_SEPARATOR . $origImagesPath   . DIRECTORY_SEPARATOR;
+$resizedImagesDir  = __DIR__ . DIRECTORY_SEPARATOR . $resizedImagesPath . DIRECTORY_SEPARATOR;
+$resizedThumbsDir  = __DIR__ . DIRECTORY_SEPARATOR . $resizedThumbsPath . DIRECTORY_SEPARATOR;
 
 if (!is_dir($origImagesDir)) die("Error: Source image folder does not exist!");
 if (!is_dir($resizedImagesDir)) mkdir($resizedImagesDir, 0755, true);
@@ -399,7 +400,7 @@ header("Content-type: text/html; charset=UTF-8");
             $pageHeaderText .= '<br><br>PHP Error: Unrecognized image format, convert and upload again.';
             $pageHeaderText .= ' <a href="?deleteInvalid">(DELETE INVALID)</a>';
             foreach ($files_invalid_format as $file_name) {
-                $pageHeaderText .= '<br><a href="'.$origPath.'/'.$file_name.'" target="_blank">'.$file_name.'</a>';
+                $pageHeaderText .= '<br><a href="'.$origImagesPath.'/'.$file_name.'" target="_blank">'.$file_name.'</a>';
             }
         }
     } else {
@@ -445,8 +446,8 @@ header("Content-type: text/html; charset=UTF-8");
         foreach ($gallery_images as $image) {
             echo '
             <div width="'.$image['thumb_width'].'" height="'.$image['thumb_height'].'">
-                <a href="'.$imagesPath.'/'.$image['file_dest_name'].'?t='.$image['image_mtime'].'" data-size="'.$image['image_width'].'x'.$image['image_height'].'" data-title="'.htmlspecialchars($image['image_title']).'" />
-                    <img data-src="'.$thumbsPath.'/'.$image['file_dest_name'].'?t='.$image['thumb_mtime'].'" class="lozad" loading="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" title="'.htmlspecialchars($image['image_title']).'">
+                <a href="'.$resizedImagesPath.'/'.$image['file_dest_name'].'?t='.$image['image_mtime'].'" data-size="'.$image['image_width'].'x'.$image['image_height'].'" data-title="'.htmlspecialchars($image['image_title']).'" />
+                    <img data-src="'.$resizedThumbsPath.'/'.$image['file_dest_name'].'?t='.$image['thumb_mtime'].'" class="lozad" loading="lazy" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" title="'.htmlspecialchars($image['image_title']).'">
                 </a>
             </div>';
         }
