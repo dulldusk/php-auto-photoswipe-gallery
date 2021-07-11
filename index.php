@@ -477,8 +477,10 @@ header("Content-type: text/html; charset=UTF-8");
         ?>
         <script type="text/javascript">
             //INIT Lazy Loader
-            const observer = lozad();
-            observer.observe();
+            try {
+                const observer = lozad();
+                observer.observe();
+            } catch(err) {}
             //INIT Mosaic Gallery
             $(function() {
                 $('#gallery').Mosaic({
@@ -498,8 +500,7 @@ header("Content-type: text/html; charset=UTF-8");
             //INIT PhotoSwipe
             (function( $ ) {
                 $.fn.photoswipe = function(options){
-                    var galleries = [],
-                        _options = options;
+                    var galleries = [], _options = options;
                     var init = function($this){
                         galleries = [];
                         $this.each(function(i, gallery){
@@ -508,11 +509,8 @@ header("Content-type: text/html; charset=UTF-8");
                                 items: []
                             });
                             $(gallery).find('a').each(function(k, link) {
-                                var $link = $(link),
-                                    size = $link.data('size').split('x');
-                                if (size.length != 2){
-                                    throw SyntaxError("Missing data-size attribute.");
-                                }
+                                var $link = $(link), size = $link.data('size').split('x');
+                                if (size.length != 2) throw SyntaxError("Missing data-size attribute.");
                                 $link.data('gallery-id',i+1);
                                 $link.data('photo-id', k);
                                 var item = {
@@ -536,26 +534,16 @@ header("Content-type: text/html; charset=UTF-8");
                     var parseHash = function() {
                         var hash = window.location.hash.substring(1),
                         params = {};
-                        if(hash.length < 5) {
-                            return params;
-                        }
+                        if(hash.length < 5) return params;
                         var vars = hash.split('&');
                         for (var i = 0; i < vars.length; i++) {
-                            if(!vars[i]) {
-                                continue;
-                            }
+                            if(!vars[i]) continue;
                             var pair = vars[i].split('=');
-                            if(pair.length < 2) {
-                                continue;
-                            }
+                            if(pair.length < 2) continue;
                             params[pair[0]] = pair[1];
                         }
-                        if(params.gid) {
-                            params.gid = parseInt(params.gid, 10);
-                        }
-                        if(!params.hasOwnProperty('pid')) {
-                            return params;
-                        }
+                        if(params.gid) params.gid = parseInt(params.gid, 10);
+                        if(!params.hasOwnProperty('pid')) return params;
                         params.pid = parseInt(params.pid, 10);
                         return params;
                     };
@@ -587,7 +575,7 @@ header("Content-type: text/html; charset=UTF-8");
                         var gallery = new PhotoSwipe( pswpElement, PhotoSwipeUI_Default, items, options);
                         gallery.init();
                     }
-                    // initialize
+                    // Initialize
                     init(this);
                     // Parse URL and open gallery if it contains #&pid=3&gid=1
                     var hashData = parseHash();
@@ -603,14 +591,11 @@ header("Content-type: text/html; charset=UTF-8");
         </script>
         <!-- Root element of PhotoSwipe. Must have class pswp. -->
         <div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
-            <!-- Background of PhotoSwipe.
-                 It's a separate element as animating opacity is faster than rgba(). -->
+            <!-- Background of PhotoSwipe. It's a separate element as animating opacity is faster than rgba(). -->
             <div class="pswp__bg"></div>
             <!-- Slides wrapper with overflow:hidden. -->
             <div class="pswp__scroll-wrap">
-                <!-- Container that holds slides.
-                    PhotoSwipe keeps only 3 of them in the DOM to save memory.
-                    Don't modify these 3 pswp__item elements, data is added later on. -->
+                <!-- Container that holds slides. PhotoSwipe keeps only 3 of them in the DOM to save memory. Don't modify these 3 pswp__item elements, data is added later on. -->
                 <div class="pswp__container">
                     <div class="pswp__item"></div>
                     <div class="pswp__item"></div>
