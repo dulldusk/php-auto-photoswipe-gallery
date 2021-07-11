@@ -279,9 +279,10 @@ header("Content-type: text/html; charset=UTF-8");
         $file_dest_name = fix_filename($file_name);
         $image_title = replace_double(' ',pathinfo($file_name, PATHINFO_FILENAME));
         $image_extension = pathinfo($file_dest_name, PATHINFO_EXTENSION);
+        if ($image_extension == 'jpeg') $image_extension = 'jpg';
         $files_do_not_delete[] = $file_dest_name;
         list($image_orig_width, $image_orig_height) = getimagesize($file);
-        if($image_extension == 'jpg' || $image_extension == 'jpeg' || $image_extension == 'png' || $image_extension == 'gif') {
+        if($image_extension == 'jpg' || $image_extension == 'png' || $image_extension == 'gif') {
             $files_arr[] = array(
                 'file_orig' => $file,
                 'file_ctime' => filectime($file),
@@ -318,7 +319,7 @@ header("Content-type: text/html; charset=UTF-8");
             $file = $files_arr[$i];
             if ($file['resize_this_image']){
                 $src_img = false;
-                if($file['image_extension'] == 'jpg' || $file['image_extension'] == 'jpeg' ) $src_img = imagecreatefromjpeg($file['file_orig']);
+                if($file['image_extension'] == 'jpg') $src_img = imagecreatefromjpeg($file['file_orig']);
                 elseif($file['image_extension'] == 'png') $src_img = imagecreatefrompng($file['file_orig']);
                 elseif($file['image_extension'] == 'gif') $src_img = imagecreatefromgif($file['file_orig']);
                 if ($src_img !== false){
@@ -333,7 +334,7 @@ header("Content-type: text/html; charset=UTF-8");
                             imagesavealpha($dst_image,true);
                         }
                         imagecopyresampled($dst_image, $src_img, 0, 0, 0, 0, $new_width, $new_height, $file['image_orig_width'], $file['image_orig_height']);
-                        if($file['image_extension'] == 'jpg' || $file['image_extension'] == 'jpeg' ) imagejpeg($dst_image, $resizedImagesDir.$file['file_dest_name'], $jpgImgQuality);
+                        if($file['image_extension'] == 'jpg') imagejpeg($dst_image, $resizedImagesDir.$file['file_dest_name'], $jpgImgQuality);
                         elseif($file['image_extension'] == 'png') imagepng($dst_image, $resizedImagesDir.$file['file_dest_name']);
                         elseif($file['image_extension'] == 'gif') imagegif($dst_image, $resizedImagesDir.$file['file_dest_name']);
                         // Clear memory
@@ -357,7 +358,7 @@ header("Content-type: text/html; charset=UTF-8");
                             imagesavealpha($dst_image,true);
                         }
                         imagecopyresampled($dst_image, $src_img, 0, 0, 0, 0, $new_width, $new_height, $file['image_orig_width'], $file['image_orig_height']);
-                        if($file['image_extension'] == 'jpg' || $file['image_extension'] == 'jpeg' ) imagejpeg($dst_image, $resizedThumbsDir.$file['file_dest_name'], $jpgImgQuality);
+                        if($file['image_extension'] == 'jpg') imagejpeg($dst_image, $resizedThumbsDir.$file['file_dest_name'], $jpgImgQuality);
                         elseif($file['image_extension'] == 'png') imagepng($dst_image, $resizedThumbsDir.$file['file_dest_name']);
                         elseif($file['image_extension'] == 'gif') imagegif($dst_image, $resizedThumbsDir.$file['file_dest_name']);
                         // Clear memory
