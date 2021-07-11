@@ -306,17 +306,11 @@ header("Content-type: text/html; charset=UTF-8");
         // Delete all files that do not exist in source directory
         $dir_list = glob($resizedImagesDir."*.{jpg,png,gif}", GLOB_BRACE);
         foreach ($dir_list as $file) {
-            $file_name = basename($file);
-            if (array_search($file_name, $files_do_not_delete) === false) {
-                @unlink($file);
-            }
+            if (array_search(basename($file), $files_do_not_delete) === false) @unlink($file);
         }
         $dir_list = glob($resizedThumbsDir."*.{jpg,png,gif}", GLOB_BRACE);
         foreach ($dir_list as $file) {
-            $file_name = basename($file);
-            if (array_search($file_name, $files_do_not_delete) === false) {
-                @unlink($file);
-            }
+            if (array_search(basename($file), $files_do_not_delete) === false) @unlink($file);
         }
         // Resize images and create thumbs
         $files_invalid_format = [];
@@ -393,7 +387,7 @@ header("Content-type: text/html; charset=UTF-8");
                     $src_img = null;
                     unset($src_img);
                 } else {
-                    if (isset($_REQUEST['deleteInvalid'])) unlink($file['file_orig']);
+                    if (isset($_REQUEST['deleteInvalid'])) @unlink($file['file_orig']);
                     else $files_invalid_format[] = $file['file_orig_name'];
                 }
             }
