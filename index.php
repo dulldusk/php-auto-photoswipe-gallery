@@ -534,9 +534,19 @@ header("Content-type: text/html; charset=UTF-8");
                                     var thumbnail = items[index].el.children[0],
                                         pageYScroll = window.pageYOffset || document.documentElement.scrollTop,
                                         rect = thumbnail.getBoundingClientRect();
-
                                     return {x:rect.left, y:rect.top + pageYScroll, w:rect.width};
-                                }
+                                },
+                                getDoubleTapZoom: function(isMouseClick, item) {
+                                    if(!item.zoomLevel) {
+                                        item.zoomLevel = item.initialZoomLevel
+                                    }
+                                    var res = item.initialZoomLevel;
+                                    if(item.zoomLevel < 1.5) res = 1.5
+                                    else if(item.zoomLevel < 3.5) res = 3.5
+                                    item.zoomLevel = res;
+                                    return res;
+                                },
+                                maxSpreadZoom: 3.5
                             };
                         $.extend(options,_options);
                         var gallery = new PhotoSwipe( pswpElement, PhotoSwipeUI_Default, items, options);
