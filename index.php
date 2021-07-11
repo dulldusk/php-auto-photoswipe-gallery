@@ -29,7 +29,7 @@ The script is a single file, and you can configure password protection with a sh
 // Maximum width or height, whichever is longer, 0 = original
 $imgMaxSize = 0;
 $thumbMaxSize = 400;
-$jpgImgQuality = 60;
+$jpgImgQuality = 70;
 
 // Option 1) HTTP Basic Password protection
 $requiredUser = "";
@@ -201,9 +201,15 @@ header("Content-type: text/html; charset=UTF-8");
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/photoswipe/4.1.3/photoswipe.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/photoswipe/4.1.3/default-skin/default-skin.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/photoswipe/4.1.3/photoswipe.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/photoswipe/4.1.3/photoswipe-ui-default.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://cdn.jsdelivr.net/npm/photoswipe@4.1.3/dist/photoswipe-ui-default.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lozad@1.16.0/dist/lozad.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery-mosaic@0.15.3/jquery.mosaic.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jquery-mosaic@0.15.3/jquery.mosaic.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <style>
 
@@ -239,61 +245,19 @@ header("Content-type: text/html; charset=UTF-8");
         .pageHeader h1, h2, h3, h4, h5 {
             margin: 0px 0px 10px 0px;
         }
-        .pswp__caption__center {
-            font-size: 16px;
-        }
         .gallery {
-            max-width: 100%;
             border: 1px solid #ccc;
             background-color: #eee;
-            padding: 7px 4px 0px 2px;
-            margin: 0 8px;
-        }
-        .gallery a {
-            margin: 0;
-            padding: 0;
-        }
-        .gallery a div {
-            display: inline-block;
         }
         .gallery img {
-            box-sizing: border-box;
-            padding: 2px;
-            /* fill, contain, cover, scale-down, none : use whichever you like */
-            object-fit: cover;
-            cursor: pointer;
-            margin-top: -4px;
-            border: 1px solid #eee;
-        }
-        .gallery img {
-            width: 50%;
-            max-height: 200px;
-            min-height: 100px;
-        }
-
-        /* [RESPONSIVE GALLERY - MOBILE FIRST] */
-
-        @media screen and (min-width: 640px) {
-            .gallery img {
-                width: 33%;
-                max-height: 250px;
-            }
-        }
-        @media screen and (min-width: 900px) {
-            .gallery img {
-                width: 25%;
-                max-height: 350px;
-            }
-        }
-        @media screen and (min-width: 1500px) {
-            .gallery img {
-                width: 20%;
-                max-height: 450px;
-            }
+            width: 100%;
         }
 
         /* [LIGHTBOX] */
 
+        .pswp__caption__center {
+            font-size: 16px;
+        }
         #lfront, #lback {
             position: fixed;
             top: 0;
@@ -326,6 +290,7 @@ header("Content-type: text/html; charset=UTF-8");
             opacity: 0.95;
             visibility: visible;
         }
+
     </style>
 </head>
 <body>
@@ -364,6 +329,8 @@ header("Content-type: text/html; charset=UTF-8");
         if($image_extension == 'jpg' || $image_extension == 'jpeg' || $image_extension == 'png' || $image_extension == 'gif') {
             $files_arr[] = array(
                 'file_orig' => $file,
+                'file_ctime' => filectime($file),
+                'file_mtime' => filemtime($file),
                 'file_orig_name' => $file_name,
                 'file_dest_name' => $file_dest_name,
                 'image_title' => $image_title,
@@ -375,8 +342,8 @@ header("Content-type: text/html; charset=UTF-8");
             );
         }
     }
-    // Sorts the images by proportion, leaving the widest ones for the end
-    $files_arr = array_csort($files_arr, "image_ratio", SORT_NUMERIC, SORT_ASC);
+    // Sort the images
+    $files_arr = array_csort($files_arr, "file_ctime", SORT_NUMERIC, SORT_DESC);
     // Delete all files that do not exist in source directory
     $dir_list = glob($resizedImagesDir."*.{jpg,png,gif}", GLOB_BRACE);
     foreach ($dir_list as $file) {
@@ -457,6 +424,9 @@ header("Content-type: text/html; charset=UTF-8");
                     imagedestroy($dst_image);
                     $dst_image = null;
                     unset($dst_image);
+                    // Save new dimentions to use on markup
+                    $files_arr[$i]['thumb_width'] = $new_width;
+                    $files_arr[$i]['thumb_height'] = $new_height;
                 } else {
                     copy($file['file_orig'],$resizedThumbsDir.$file['file_dest_name']);
                 }
@@ -469,6 +439,16 @@ header("Content-type: text/html; charset=UTF-8");
             }
         }
         if (file_exists($resizedImagesDir.$file['file_dest_name']) && file_exists($resizedThumbsDir.$file['file_dest_name'])){
+            if (!isset($file['image_width'])){
+                list($image_width, $image_height) = getimagesize($resizedImagesDir.$file['file_dest_name']);
+                $file['image_width'] = $image_width;
+                $file['image_height'] = $image_height;
+            }
+            if (!isset($file['thumb_width'])){
+                list($thumb_width, $thumb_height) = getimagesize($resizedThumbsDir.$file['file_dest_name']);
+                $file['thumb_width'] = $thumb_width;
+                $file['thumb_height'] = $thumb_height;
+            }
             $gallery_images[] = $file;
         }
     }
@@ -493,171 +473,132 @@ header("Content-type: text/html; charset=UTF-8");
         echo '</div>';
     }
     if (count($gallery_images)){
-        echo '<div class="gallery">';
+        echo '<div id="gallery" class="gallery">';
         foreach ($gallery_images as $image) {
-            echo '<a href="'.$imagesPath.'/'.$image['file_dest_name'].'" data-size="'.$image['image_width'].'x'.$image['image_height'].'" data-title="'.htmlspecialchars($image['image_title']).'" /><img src="'.$thumbsPath.'/'.$image['file_dest_name'].'" title="'.htmlspecialchars($image['image_title']).'"></a>';
+            echo '
+            <div width="'.$image['thumb_width'].'" height="'.$image['thumb_height'].'">
+                <a href="'.$imagesPath.'/'.$image['file_dest_name'].'" data-size="'.$image['image_width'].'x'.$image['image_height'].'" data-title="'.htmlspecialchars($image['image_title']).'" />
+                    <img class="lozad" src="" data-src="'.$thumbsPath.'/'.$image['file_dest_name'].'" title="'.htmlspecialchars($image['image_title']).'">
+                </a>
+            </div>';
         }
         echo '</div>';
         ?>
         <script type="text/javascript">
-            //INIT using pure Vanilla JS implementation with IE8 support
-            var initPhotoSwipeFromDOM = function(gallerySelector) {
-                // parse slide data (url, title, size ...) from DOM elements
-                // (children of gallerySelector)
-                var parseThumbnailElements = function(el) {
-                    var thumbElements = el.childNodes,
-                        numNodes = thumbElements.length,
-                        items = [],
-                        linkEl,
-                        size,
-                        item;
-                    for(var i = 0; i < numNodes; i++) {
-                        linkEl = thumbElements[i]; // <a> element
-                        if (linkEl.tagName && linkEl.tagName.toUpperCase() === 'A') {
-                            size = linkEl.getAttribute('data-size').split('x');
-                            // create slide object
-                            item = {
-                                src: linkEl.getAttribute('href'),
-                                w: parseInt(size[0], 10),
-                                h: parseInt(size[1], 10),
-                                title: linkEl.getAttribute('data-title')
-                            };
-                            if(linkEl.children.length > 0) {
-                                // <img> thumbnail element, retrieving thumbnail url
-                                item.msrc = linkEl.children[0].getAttribute('src');
-                            }
-                            item.el = linkEl; // save link to element for getThumbBoundsFn
-                            items.push(item);
-                        }
-                    }
-                    return items;
-                };
-                // find nearest parent element
-                var closest = function closest(el, fn) {
-                    return el && ( fn(el) ? el : closest(el.parentNode, fn) );
-                };
-                // triggers when user clicks on thumbnail
-                var onThumbnailsClick = function(e) {
-                    e = e || window.event;
-                    e.preventDefault ? e.preventDefault() : e.returnValue = false;
-                    var eTarget = e.target || e.srcElement;
-                    // find root element of slide
-                    var clickedListItem = closest(eTarget, function(el) {
-                        return (el.tagName && el.tagName.toUpperCase() === 'A');
-                    });
-                    if(!clickedListItem) {
-                        return;
-                    }
-                    // find index of clicked item by looping through all child nodes
-                    // alternatively, you may define index via data- attribute
-                    var clickedGallery = clickedListItem.parentNode,
-                        childNodes = clickedListItem.parentNode.childNodes,
-                        numChildNodes = childNodes.length,
-                        nodeIndex = 0,
-                        index;
-                    for (var i = 0; i < numChildNodes; i++) {
-                        if(childNodes[i].nodeType !== 1) {
-                            continue;
-                        }
-                        if(childNodes[i] === clickedListItem) {
-                            index = nodeIndex;
-                            break;
-                        }
-                        if (childNodes[i].tagName && childNodes[i].tagName.toUpperCase() === 'A') {
-                            nodeIndex++;
-                        }
-                    }
-                    if(index >= 0) {
-                        // open PhotoSwipe if valid index found
-                        openPhotoSwipe( index, clickedGallery );
-                    }
-                    return false;
-                };
-                // parse picture index and gallery index from URL (#&pid=1&gid=2)
-                var photoswipeParseHash = function() {
-                    var hash = window.location.hash.substring(1),
-                    params = {};
-                    if(hash.length < 5) {
-                        return params;
-                    }
-                    var vars = hash.split('&');
-                    for (var i = 0; i < vars.length; i++) {
-                        if(!vars[i]) {
-                            continue;
-                        }
-                        var pair = vars[i].split('=');
-                        if(pair.length < 2) {
-                            continue;
-                        }
-                        params[pair[0]] = pair[1];
-                    }
-                    if(params.gid) {
-                        params.gid = parseInt(params.gid, 10);
-                    }
-                    return params;
-                };
-                var openPhotoSwipe = function(index, galleryElement, disableAnimation, fromURL) {
-                    var pswpElement = document.querySelectorAll('.pswp')[0],
-                        gallery,
-                        options,
-                        items;
-                    items = parseThumbnailElements(galleryElement);
-                    // define options (if needed)
-                    options = {
-                        // define gallery index (for URL)
-                        galleryUID: galleryElement.getAttribute('data-pswp-uid'),
-                        getThumbBoundsFn: function(index) {
-                            // See Options -> getThumbBoundsFn section of documentation for more info
-                            var thumbnail = items[index].el.getElementsByTagName('img')[0], // find thumbnail
-                                pageYScroll = window.pageYOffset || document.documentElement.scrollTop,
-                                rect = thumbnail.getBoundingClientRect();
-
-                            return {x:rect.left, y:rect.top + pageYScroll, w:rect.width};
-                        }
-                    };
-                    // PhotoSwipe opened from URL
-                    if(fromURL) {
-                        if(options.galleryPIDs) {
-                            // parse real index when custom PIDs are used
-                            // http://photoswipe.com/documentation/faq.html#custom-pid-in-url
-                            for(var j = 0; j < items.length; j++) {
-                                if(items[j].pid == index) {
-                                    options.index = j;
-                                    break;
+            //INIT Lazy Loader
+            const observer = lozad();
+            observer.observe();
+            //INIT Mosaic Gallery
+            $(function() {
+                $('#gallery').Mosaic({
+                    outerMargin: 10,
+                    innerGap: 10,
+                    defaultAspectRatio: 1,
+                    maxRowHeight: 400,
+                    maxRowHeightPolicy: 'tail', // crop, skip, oversize, tail
+                    highResImagesWidthThreshold: 3000,
+                    responsiveWidthThreshold: false,
+                    refitOnResize: true,
+                    //refitOnResizeDelay: 500,
+                    maxItemsToShowWhenResponsiveThresholdSurpassed: 10,
+                    showTailWhenNotEnoughItemsForEvenOneRow: true
+                });
+            });
+            //INIT PhotoSwipe
+            (function( $ ) {
+                $.fn.photoswipe = function(options){
+                    var galleries = [],
+                        _options = options;
+                    var init = function($this){
+                        galleries = [];
+                        $this.each(function(i, gallery){
+                            galleries.push({
+                                id: i,
+                                items: []
+                            });
+                            $(gallery).find('a').each(function(k, link) {
+                                var $link = $(link),
+                                    size = $link.data('size').split('x');
+                                if (size.length != 2){
+                                    throw SyntaxError("Missing data-size attribute.");
                                 }
-                            }
-                        } else {
-                            // in URL indexes start from 1
-                            options.index = parseInt(index, 10) - 1;
+                                $link.data('gallery-id',i+1);
+                                $link.data('photo-id', k);
+                                var item = {
+                                    src: link.href,
+                                    msrc: link.children[0].getAttribute('src'),
+                                    w: parseInt(size[0],10),
+                                    h: parseInt(size[1],10),
+                                    title: $link.data('title'),
+                                    el: link
+                                }
+                                galleries[i].items.push(item);
+                            });
+                            $(gallery).on('click', 'a', function(e){
+                                e.preventDefault();
+                                var gid = $(this).data('gallery-id'),
+                                    pid = $(this).data('photo-id');
+                                openGallery(gid,pid);
+                            });
+                        });
+                    }
+                    var parseHash = function() {
+                        var hash = window.location.hash.substring(1),
+                        params = {};
+                        if(hash.length < 5) {
+                            return params;
                         }
-                    } else {
-                        options.index = parseInt(index, 10);
+                        var vars = hash.split('&');
+                        for (var i = 0; i < vars.length; i++) {
+                            if(!vars[i]) {
+                                continue;
+                            }
+                            var pair = vars[i].split('=');
+                            if(pair.length < 2) {
+                                continue;
+                            }
+                            params[pair[0]] = pair[1];
+                        }
+                        if(params.gid) {
+                            params.gid = parseInt(params.gid, 10);
+                        }
+                        if(!params.hasOwnProperty('pid')) {
+                            return params;
+                        }
+                        params.pid = parseInt(params.pid, 10);
+                        return params;
+                    };
+                    var openGallery = function(gid,pid){
+                        var pswpElement = document.querySelectorAll('.pswp')[0],
+                            items = galleries[gid-1].items,
+                            options = {
+                                index: pid,
+                                galleryUID: gid,
+                                getThumbBoundsFn: function(index) {
+                                    var thumbnail = items[index].el.children[0],
+                                        pageYScroll = window.pageYOffset || document.documentElement.scrollTop,
+                                        rect = thumbnail.getBoundingClientRect();
+
+                                    return {x:rect.left, y:rect.top + pageYScroll, w:rect.width};
+                                }
+                            };
+                        $.extend(options,_options);
+                        var gallery = new PhotoSwipe( pswpElement, PhotoSwipeUI_Default, items, options);
+                        gallery.init();
                     }
-                    // exit if index not found
-                    if( isNaN(options.index) ) {
-                        return;
+                    // initialize
+                    init(this);
+                    // Parse URL and open gallery if it contains #&pid=3&gid=1
+                    var hashData = parseHash();
+                    if(hashData.pid > 0 && hashData.gid > 0) {
+                        openGallery(hashData.gid,hashData.pid);
                     }
-                    if(disableAnimation) {
-                        options.showAnimationDuration = 0;
-                    }
-                    // Pass data to PhotoSwipe and initialize it
-                    gallery = new PhotoSwipe( pswpElement, PhotoSwipeUI_Default, items, options);
-                    gallery.init();
+                    return this;
                 };
-                // loop through all gallery elements and bind events
-                var galleryElements = document.querySelectorAll( gallerySelector );
-                for(var i = 0, l = galleryElements.length; i < l; i++) {
-                    galleryElements[i].setAttribute('data-pswp-uid', i+1);
-                    galleryElements[i].onclick = onThumbnailsClick;
-                }
-                // Parse URL and open gallery if it contains #&pid=3&gid=1
-                var hashData = photoswipeParseHash();
-                if(hashData.pid && hashData.gid) {
-                    openPhotoSwipe( hashData.pid ,  galleryElements[ hashData.gid - 1 ], true, true );
-                }
-            };
-            // execute above function
-            initPhotoSwipeFromDOM('.gallery');
+            }( jQuery ));
+            $(function() {
+                $('#gallery').photoswipe();
+            });
         </script>
         <!-- Root element of PhotoSwipe. Must have class pswp. -->
         <div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
