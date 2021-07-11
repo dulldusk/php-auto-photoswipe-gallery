@@ -414,13 +414,14 @@ header("Content-type: text/html; charset=UTF-8");
         }
     }
     if (strlen($pageHeaderTitle) || strlen($pageHeaderText)) {
+        $totalImages = ' - Showing '.count($gallery_images).((count($gallery_images)==1)?' image':' images');
         echo '<div class="pageHeader">';
         if (strlen($pageHeaderTitle)) {
             echo '<h2><a href="';
             if (strlen($requiredPasswordForm)) {
                 echo currentUrl(true).'?auth='.md5($requiredPasswordForm);
             }
-            echo '">'.$pageHeaderTitle.'</a></h2>';
+            echo '">'.$pageHeaderTitle.$totalImages.'</a></h2>';
         }
         if (strlen($pageHeaderText)) {
             echo '<h5>'.$pageHeaderText.'</h5>';
