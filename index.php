@@ -40,7 +40,7 @@ $requiredPassword = "";
 
 // Option 2) Form Based Password protection
 // Once defined, you can login on the page, and copy the link on the page header to share for direct access
-$requiredPasswordForm = "";
+$requiredPasswordForm = "444";
 
 // Folder options
 $origImagesPath = 'put_images_here';
@@ -70,7 +70,7 @@ if (!is_dir($origImagesDir)) die("Error: Source image folder does not exist!");
 if (!is_dir($resizedImagesDir)) mkdir($resizedImagesDir, 0755, true);
 if (!is_dir($resizedThumbsDir)) mkdir($resizedThumbsDir, 0755, true);
 
-$refreshGallery = !isset($_COOKIE['galleryRefreshed']) || intval($_REQUEST['refreshGallery']);
+$refreshGallery = !isset($_COOKIE['galleryRefreshed']) || intval($_GET['refreshGallery']);
 setcookie('galleryRefreshed','1', time() + (365 * 24 * 60 * 60)); // 1 year
 
 // Form Based Password protection
@@ -90,9 +90,8 @@ if (strlen($requiredPasswordForm)){
         }
     }
     if ($_COOKIE['auth'] == md5($requiredPasswordForm)){
-        $url_with_auth = currentUrl(true).'?auth='.md5($requiredPasswordForm);
-        if(currentUrl() != $url_with_auth){
-            header('Location: '.$url_with_auth);
+        if(!strlen($_GET['auth'])){
+            header('Location: '.get_page_url('all',array('auth'=>md5($requiredPasswordForm))));
             die();
         }
     }
@@ -124,21 +123,27 @@ if (strlen($requiredUser) || strlen($requiredPassword)) {
 // ------------------------------------------------------------------------------------------
 // Functions
 // ------------------------------------------------------------------------------------------
-
-function currentUrl($trim_query_string=false) {
-    $pageURL = (isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] == 'on') ? "https://" : "http://";
-    $pageURL .= $_SERVER["SERVER_NAME"] . $_SERVER["REQUEST_URI"];
-    if(!$trim_query_string) {
-        return $pageURL;
-    } else {
-        $url = explode('?', $pageURL);
-        return $url[0];
+function get_page_url($keep_params='none',$new_params=false) { // $keep_params = none, new, all
+    $url = (isset( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] == 'on') ? "https://" : "http://";
+    $url .= $_SERVER["SERVER_NAME"];
+    $url .= $_SERVER["REQUEST_URI"];
+    $url_parts = parse_url($url);
+    if ($keep_params == 'none') return $url_parts['scheme'].'://'.$url_parts['host'].$url_parts['path'];
+    if ($keep_params == 'new') $url_parts['query'] = [];
+    $url_params = [];
+    parse_str($url_parts['query'], $url_params);
+    if(is_array($new_params)) {
+        foreach ($new_params as $key => $value) {
+            $url_params[$key] = $value;
+        }
+        $url_parts['query'] = http_build_query($url_params);
     }
+    return $url_parts['scheme'].'://'.$url_parts['host'].$url_parts['path'].'?'.$url_parts['query'];
 }
-function uppercase($str){
+function str_uppercase($str){
     return mb_strtoupper($str,'UTF-8');
 }
-function lowercase($str){
+function str_lowercase($str){
     return mb_strtolower($str,'UTF-8');
 }
 function str_strip($str,$valid_chars){
@@ -151,15 +156,15 @@ function str_strip($str,$valid_chars){
     }
     return $out;
 }
-function replace_double($sub,$str){
-    $out=str_replace($sub.$sub,$sub,$str);
-    while ( mb_strlen($out) != mb_strlen($str) ){
-        $str=$out;
-        $out=str_replace($sub.$sub,$sub,$str);
+function str_replace_double($sub,$str){
+    $out = str_replace($sub.$sub,$sub,$str);
+    while (mb_strlen($out) != mb_strlen($str)){
+        $str = $out;
+        $out = str_replace($sub.$sub,$sub,$str);
     }
     return $out;
 }
-function fix_filename($str) {
+function str_fix_filename($str) {
     $str = strip_tags($str);
     $str = preg_replace('/[\r\n\t ]+/',' ',$str);
     $str = preg_replace('/[\"\*\/\:\<\>\?\'\|]+/',' ',$str);
@@ -170,7 +175,7 @@ function fix_filename($str) {
     $str = str_replace(' ','-',$str);
     $str = rawurlencode($str);
     $str = str_replace('%','-',$str);
-    $str = replace_double('-',$str);
+    $str = str_replace_double('-',$str);
     return $str;
 }
 // ex: return array_csort($o, "date", SORT_NUMERIC, SORT_DESC);
@@ -287,8 +292,8 @@ header("Content-type: text/html; charset=UTF-8");
     $dir_list = glob($origImagesDir."*.{jpg,JPG,jpeg,JPEG,png,PNG,gif,GIF}", GLOB_BRACE);
     foreach ($dir_list as $file) {
         $file_name = basename($file);
-        $file_dest_name = fix_filename($file_name);
-        $image_title = replace_double(' ',pathinfo($file_name, PATHINFO_FILENAME));
+        $file_dest_name = str_fix_filename($file_name);
+        $image_title = str_replace_double(' ',pathinfo($file_name, PATHINFO_FILENAME));
         $image_extension = pathinfo($file_dest_name, PATHINFO_EXTENSION);
         if ($image_extension == 'jpeg') $image_extension = 'jpg';
         $files_do_not_delete[] = $file_dest_name;
@@ -412,11 +417,14 @@ header("Content-type: text/html; charset=UTF-8");
             $pageHeaderText .= '&nbsp;
             <form name="delete_invalid_form" method="get" style="display: inline-block; margin-bottom: 10px;">
                 <input type="hidden" name="refreshGallery" value="1">
-                <input type="hidden" name="deleteInvalid" value="1">
+                <input type="hidden" name="deleteInvalid" value="1">';
+            if (strlen($requiredPasswordForm) && strlen($_COOKIE['auth'])) $pageHeaderText .= '
+                <input type="hidden" name="auth" value="'.$_COOKIE['auth'].'">';
+            $pageHeaderText .= '
                 <input type="submit" value="Delete Invalid Images">
             </form>';
             foreach ($files_invalid_format as $file_name) {
-                $pageHeaderText .= '<br><a href="'.$origImagesPath.'/'.$file_name.'" target="_blank">'.currentUrl(true).$origImagesPath.'/'.$file_name.'</a>';
+                $pageHeaderText .= '<br><a href="'.$origImagesPath.'/'.$file_name.'" target="_blank">'.get_page_url().$origImagesPath.'/'.$file_name.'</a>';
             }
         }
     } else {
@@ -444,14 +452,17 @@ header("Content-type: text/html; charset=UTF-8");
         $totalImages = ' - Showing '.count($gallery_images).((count($gallery_images)==1)?' image':' images');
         $refreshButton = '&nbsp;
         <form name="refresh_form" method="get" style="display: inline-block;">
-            <input type="hidden" name="refreshGallery" value="1">
+            <input type="hidden" name="refreshGallery" value="1">';
+        if (strlen($requiredPasswordForm) && strlen($_COOKIE['auth'])) $refreshButton .= '
+            <input type="hidden" name="auth" value="'.$_COOKIE['auth'].'">';
+        $refreshButton .= '
             <input type="submit" value="Refresh Gallery">
         </form>';
         echo '<div class="pageHeader">';
         if (strlen($pageHeaderTitle)) {
             echo '<h2 style="display: inline-block;"><a href="';
-            if (strlen($requiredPasswordForm)) echo currentUrl(true).'?auth='.md5($requiredPasswordForm);
-            else echo currentUrl(true);
+            if (strlen($requiredPasswordForm)) echo get_page_url('new',array('auth'=>md5($requiredPasswordForm)));
+            else echo get_page_url();
             echo '">'.$pageHeaderTitle.$totalImages.'</a>'.$refreshButton.'</h2>';
         }
         if (strlen($pageHeaderText)) echo '<h5>'.$pageHeaderText.'</h5>';
