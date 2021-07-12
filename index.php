@@ -40,7 +40,7 @@ $requiredPassword = "";
 
 // Option 2) Form Based Password protection
 // Once defined, you can login on the page, and copy the link on the page header to share for direct access
-$requiredPasswordForm = "444";
+$requiredPasswordForm = "";
 
 // Folder options
 $origImagesPath = 'put_images_here';
